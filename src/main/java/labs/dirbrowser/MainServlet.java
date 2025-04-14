@@ -6,6 +6,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -27,28 +28,17 @@ public class MainServlet extends HttpServlet {
 
         ServletContext context = config.getServletContext();
 
-        this.baseDirectory = getPath(context);
+        this.baseDirectory = ConfigurationHelper.getFileRootDirectory(context);
         System.out.println("Serving files from base directory: " + this.baseDirectory);
-    }
-
-    private Path getPath(ServletContext context) throws ServletException {
-        String realPath = context.getRealPath("/fileroot");
-
-        if (realPath == null) {
-            throw new ServletException("Cannot find fileroot directory");
-        }
-        Path baseDirectory = Paths.get(realPath);
-
-        if (!Files.isDirectory(baseDirectory)) {
-            throw new ServletException("fileroot is not a directory");
-        }
-
-        return baseDirectory;
     }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
+        String username = ensureLoggedIn(req, resp);
+        if(username == null) {
+            return;
+        }
 
         String requestedRelativePath = req.getParameter("path");
         if (requestedRelativePath == null || requestedRelativePath.isEmpty() || requestedRelativePath.equals("/")) {
@@ -58,9 +48,13 @@ public class MainServlet extends HttpServlet {
         // just in case
         requestedRelativePath = DirectoryHelper.replaceWindowsLineEndings(requestedRelativePath);
 
+        var requestedRelativePathWithinUserDirectory = Paths.get(username, requestedRelativePath);
+
+        Path requestedPath = this.baseDirectory.resolve(requestedRelativePathWithinUserDirectory).normalize();
+        Path userBaseDirectory = getUserBaseDirectory(username);
+
         // in case someone tries "../"
-        Path requestedPath = this.baseDirectory.resolve(requestedRelativePath).normalize();
-        if (!requestedPath.startsWith(this.baseDirectory)) {
+        if (!requestedPath.startsWith(userBaseDirectory)) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "lmao no");
             return;
         }
@@ -71,7 +65,7 @@ public class MainServlet extends HttpServlet {
         }
 
         if (Files.isDirectory(requestedPath)) {
-            serveDirectory(requestedPath, resp, req);
+            serveDirectory(requestedPath, username, resp, req);
         } else {
             serveFile(requestedPath, resp);
         }
@@ -93,10 +87,10 @@ public class MainServlet extends HttpServlet {
         }
     }
 
-    private void serveDirectory(Path directoryPath, HttpServletResponse resp, HttpServletRequest req)
+    private void serveDirectory(Path directoryPath, String username, HttpServletResponse resp, HttpServletRequest req)
             throws ServletException, IOException {
 
-        var directory = new Directory(directoryPath, baseDirectory, DATE_FORMATTER);
+        var directory = new Directory(directoryPath, getUserBaseDirectory(username), DATE_FORMATTER);
 
         var generationTime = LocalDateTime.now();
         String formattedGenerationTime = generationTime.format(DATE_FORMATTER);
@@ -105,5 +99,26 @@ public class MainServlet extends HttpServlet {
         req.setAttribute("generationTime", formattedGenerationTime);
 
         req.getRequestDispatcher("/WEB-INF/browser.jsp").forward(req, resp);
+    }
+
+    /**
+     * @return Username if logged in, otherwise, {@code null}.
+     * @throws IOException
+     */
+    private String ensureLoggedIn(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        var session = req.getSession(false);
+
+        boolean loggedIn = session != null && session.getAttribute("username") != null;
+
+        if(!loggedIn) {
+            resp.sendRedirect(req.getContextPath() + "/login");
+            return null;
+        }
+
+        return (String) session.getAttribute("username");
+    }
+
+    private Path getUserBaseDirectory(String username) {
+        return this.baseDirectory.resolve(username).normalize();
     }
 }

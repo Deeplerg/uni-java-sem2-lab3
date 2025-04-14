@@ -8,9 +8,33 @@
         <servlet-name>mainServlet</servlet-name>
         <servlet-class>labs.dirbrowser.MainServlet</servlet-class>
     </servlet>
+    <servlet>
+        <servlet-name>loginServlet</servlet-name>
+        <servlet-class>labs.dirbrowser.LoginServlet</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>logoutServlet</servlet-name>
+        <servlet-class>labs.dirbrowser.LogoutServlet</servlet-class>
+    </servlet>
+    <servlet>
+        <servlet-name>registerServlet</servlet-name>
+        <servlet-class>labs.dirbrowser.RegisterServlet</servlet-class>
+    </servlet>
 
     <servlet-mapping>
         <servlet-name>mainServlet</servlet-name>
         <url-pattern>/browse/*</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>loginServlet</servlet-name>
+        <url-pattern>/login/*</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>logoutServlet</servlet-name>
+        <url-pattern>/logout/*</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>registerServlet</servlet-name>
+        <url-pattern>/register/*</url-pattern>
     </servlet-mapping>
 </web-app>

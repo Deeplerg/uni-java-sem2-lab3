@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE Configure PUBLIC "-//Jetty//Configure//EN" "http://www.eclipse.org/jetty/configure_10_0.dtd">
+
+<Configure class="org.eclipse.jetty.ee10.webapp.WebAppContext">
+    <Get id="SessionHandler" name="sessionHandler">
+        <Set name="sessionCache">
+            <New class="org.eclipse.jetty.session.DefaultSessionCache">
+                <Arg>
+                    <Ref refid="SessionHandler"/>
+                </Arg>
+                <Set name="sessionDataStore">
+                    <New class="org.eclipse.jetty.session.FileSessionDataStore">
+                        <Set name="storeDir">
+                            <SystemProperty name="project.build.directory" default="./target"/>/sessions
+                        </Set>
+                        <Set name="deleteUnrestorableFiles">
+                            true
+                        </Set>
+                    </New>
+                </Set>
+            </New>
+        </Set>
+    </Get>
+</Configure>

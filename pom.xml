@@ -71,6 +71,12 @@
                     <httpConnector>
                         <port>8080</port>
                     </httpConnector>
+                    <systemProperties>
+                        <systemProperty>
+                            <name>project.build.directory</name>
+                            <value>${project.build.directory}</value>
+                        </systemProperty>
+                    </systemProperties>
                 </configuration>
             </plugin>
         </plugins>

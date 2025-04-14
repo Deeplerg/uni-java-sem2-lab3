@@ -29,3 +29,19 @@ header h1 {
 #index td.length, td.modified { text-align:right; }
 a { color:#1ba1e2;text-decoration:none; }
 a:hover { color:#13709e;text-decoration:underline; }
+
+input {
+    margin: 5px;
+}
+
+input[type=submit] {
+    margin: 5px;
+    border-radius: 4px;
+    background-color: #39C5F4;
+    border: 1px solid black;
+    padding: 5px;
+}
+
+input[type=submit]:hover {
+    background-color: #1ba1e2;
+}

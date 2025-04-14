@@ -10,6 +10,15 @@
 <body>
     <section id="main">
         <header>
+            <div>
+                <c:if test="${not empty sessionScope.username}">
+                    <span>Welcome, ${sessionScope.username}!</span>
+                    <form action="../logout" method="post" style="display: inline;">
+                        <input type="submit" value="Logout">
+                    </form>
+                </c:if>
+            </div>
+
             <p>
                 Generated at ${generationTime}
             </p>
