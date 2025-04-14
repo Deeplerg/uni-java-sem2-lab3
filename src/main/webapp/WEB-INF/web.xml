@@ -5,8 +5,8 @@
          version="6.0">
 
     <servlet>
-        <servlet-name>mainServlet</servlet-name>
-        <servlet-class>labs.dirbrowser.MainServlet</servlet-class>
+        <servlet-name>browseServlet</servlet-name>
+        <servlet-class>labs.dirbrowser.BrowseServlet</servlet-class>
     </servlet>
     <servlet>
         <servlet-name>loginServlet</servlet-name>
@@ -22,7 +22,7 @@
     </servlet>
 
     <servlet-mapping>
-        <servlet-name>mainServlet</servlet-name>
+        <servlet-name>browseServlet</servlet-name>
         <url-pattern>/browse/*</url-pattern>
     </servlet-mapping>
     <servlet-mapping>

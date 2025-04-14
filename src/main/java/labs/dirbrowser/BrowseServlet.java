@@ -6,7 +6,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -16,7 +15,7 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-public class MainServlet extends HttpServlet {
+public class BrowseServlet extends HttpServlet {
 
     private Path baseDirectory;
     private static final DateTimeFormatter DATE_FORMATTER =
@@ -98,7 +97,7 @@ public class MainServlet extends HttpServlet {
         req.setAttribute("directory", directory);
         req.setAttribute("generationTime", formattedGenerationTime);
 
-        req.getRequestDispatcher("/WEB-INF/browser.jsp").forward(req, resp);
+        req.getRequestDispatcher("/WEB-INF/browse.jsp").forward(req, resp);
     }
 
     /**
