@@ -1,4 +1,4 @@
-package labs.dirbrowser;
+package labs.dirbrowser.presentation;
 
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletContext;
@@ -7,6 +7,10 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
+import labs.dirbrowser.application.UserService;
+import labs.dirbrowser.domain.User;
+import labs.dirbrowser.infrastructure.Argon2PasswordHasher;
+import labs.dirbrowser.infrastructure.MySQLUserRepository;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,7 +18,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 
 public class RegisterServlet extends HttpServlet {
-    private final UserService userService = new UserService();
+    private UserService userService;
     private Path baseDirectory;
 
     @Override
@@ -24,6 +28,19 @@ public class RegisterServlet extends HttpServlet {
         ServletContext context = config.getServletContext();
 
         this.baseDirectory = ConfigurationHelper.getFileRootDirectory(context);
+
+        String connectionUrl = ConfigurationHelper.getMySQLConnectionUrl(context);
+        var userRepository = new MySQLUserRepository(connectionUrl);
+
+        var argon2Configuration = ConfigurationHelper.getArgon2Configuration(context);
+        var hasher = new Argon2PasswordHasher(
+                argon2Configuration.memoryKiB(),
+                argon2Configuration.iterations(),
+                argon2Configuration.parallelismThreads(),
+                argon2Configuration.keyLengthBytes()
+        );
+
+        userService = new UserService(userRepository, hasher);
     }
 
     @Override
@@ -44,19 +61,12 @@ public class RegisterServlet extends HttpServlet {
 
         if(username == null || username.isBlank()) {
             errors.add("Username cannot be empty.");
-        } else {
-            Path userHome = baseDirectory.resolve(username).normalize();
-
-            if (!userHome.startsWith(this.baseDirectory)) {
-                errors.add("What are you trying to do?");
-            }
         }
-
         if(password == null || password.isBlank()) {
             errors.add("Password cannot be empty.");
         }
 
-        User user;
+        User user = null;
         if(errors.isEmpty()) {
             user = userService.createUser(username, password, email);
 
@@ -71,7 +81,7 @@ public class RegisterServlet extends HttpServlet {
             return;
         }
 
-        Path userHome = baseDirectory.resolve(username).normalize();
+        Path userHome = baseDirectory.resolve(user.getId().toString()).normalize();
 
         if (!Files.exists(userHome)) {
             Files.createDirectory(userHome);
@@ -79,7 +89,7 @@ public class RegisterServlet extends HttpServlet {
         }
 
         HttpSession session = req.getSession();
-        session.setAttribute("username", username);
+        session.setAttribute("userId", user.getId().toString());
         resp.sendRedirect(req.getContextPath() + "/browse/");
     }
 }

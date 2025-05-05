@@ -1,7 +1,6 @@
-package labs.dirbrowser;
+package labs.dirbrowser.domain;
 
 import java.io.File;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.LocalDateTime;

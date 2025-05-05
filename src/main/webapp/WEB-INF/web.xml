@@ -4,23 +4,56 @@
          xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
          version="6.0">
 
+
+    <context-param>
+        <param-name>fileRootRelativeDirectory</param-name>
+        <param-value>/fileroot</param-value>
+    </context-param>
+
+    <context-param>
+        <param-name>mySQLConnectionUrl</param-name>
+        <param-value>jdbc:mysql://ip:port/db?user=user&amp;password=pass</param-value>
+    </context-param>
+
+    <context-param>
+        <param-name>argon2MemoryKiB</param-name>
+        <param-value>1024</param-value>
+    </context-param>
+    <context-param>
+        <param-name>argon2Iterations</param-name>
+        <param-value>3</param-value>
+    </context-param>
+    <context-param>
+        <param-name>argon2ParallelismThreads</param-name>
+        <param-value>1</param-value>
+    </context-param>
+    <context-param>
+        <param-name>argon2KeyLengthBytes</param-name>
+        <param-value>32</param-value>
+    </context-param>
+
+
     <servlet>
         <servlet-name>browseServlet</servlet-name>
-        <servlet-class>labs.dirbrowser.BrowseServlet</servlet-class>
+        <servlet-class>labs.dirbrowser.presentation.BrowseServlet</servlet-class>
     </servlet>
     <servlet>
         <servlet-name>loginServlet</servlet-name>
-        <servlet-class>labs.dirbrowser.LoginServlet</servlet-class>
+        <servlet-class>labs.dirbrowser.presentation.LoginServlet</servlet-class>
     </servlet>
     <servlet>
         <servlet-name>logoutServlet</servlet-name>
-        <servlet-class>labs.dirbrowser.LogoutServlet</servlet-class>
+        <servlet-class>labs.dirbrowser.presentation.LogoutServlet</servlet-class>
     </servlet>
     <servlet>
         <servlet-name>registerServlet</servlet-name>
-        <servlet-class>labs.dirbrowser.RegisterServlet</servlet-class>
+        <servlet-class>labs.dirbrowser.presentation.RegisterServlet</servlet-class>
     </servlet>
 
+    <servlet-mapping>
+        <servlet-name>browseServlet</servlet-name>
+        <url-pattern>/</url-pattern>
+    </servlet-mapping>
     <servlet-mapping>
         <servlet-name>browseServlet</servlet-name>
         <url-pattern>/browse/*</url-pattern>

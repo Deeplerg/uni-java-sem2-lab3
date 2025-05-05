@@ -1,6 +1,7 @@
 ﻿<%@ taglib prefix="c" uri="jakarta.tags.core"%>
-<jsp:useBean id="directory" scope="request" type="labs.dirbrowser.Directory"/>
+<jsp:useBean id="directory" scope="request" type="labs.dirbrowser.domain.Directory"/>
 <jsp:useBean id="generationTime" scope="request" type="java.lang.String"/>
+<jsp:useBean id="username" scope="request" type="java.lang.String"/>
 <%@ page contentType="text/html;charset=UTF-8" %>
 <html>
 <head>
@@ -11,8 +12,8 @@
     <section id="main">
         <header>
             <div>
-                <c:if test="${not empty sessionScope.username}">
-                    <span>Welcome, ${sessionScope.username}!</span>
+                <c:if test="${not empty username}">
+                    <span>Welcome, ${username}!</span>
                     <form action="../logout" method="post" style="display: inline;">
                         <input type="submit" value="Logout">
                     </form>

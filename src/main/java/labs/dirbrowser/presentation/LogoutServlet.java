@@ -1,4 +1,4 @@
-package labs.dirbrowser;
+package labs.dirbrowser.presentation;
 
 import jakarta.servlet.http.*;
 import java.io.IOException;

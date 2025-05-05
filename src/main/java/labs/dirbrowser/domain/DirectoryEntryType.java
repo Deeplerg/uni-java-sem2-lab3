@@ -1,4 +1,4 @@
-package labs.dirbrowser;
+package labs.dirbrowser.domain;
 
 public enum DirectoryEntryType {
     File,

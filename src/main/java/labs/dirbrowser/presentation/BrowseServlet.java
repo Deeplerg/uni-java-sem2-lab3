@@ -1,4 +1,4 @@
-package labs.dirbrowser;
+package labs.dirbrowser.presentation;
 
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletContext;
@@ -6,6 +6,12 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import labs.dirbrowser.application.UserService;
+import labs.dirbrowser.domain.Directory;
+import labs.dirbrowser.domain.DirectoryHelper;
+import labs.dirbrowser.domain.User;
+import labs.dirbrowser.infrastructure.Argon2PasswordHasher;
+import labs.dirbrowser.infrastructure.MySQLUserRepository;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -14,9 +20,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.UUID;
 
 public class BrowseServlet extends HttpServlet {
-
+    private UserService userService;
     private Path baseDirectory;
     private static final DateTimeFormatter DATE_FORMATTER =
             DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
@@ -28,16 +35,38 @@ public class BrowseServlet extends HttpServlet {
         ServletContext context = config.getServletContext();
 
         this.baseDirectory = ConfigurationHelper.getFileRootDirectory(context);
+
+        String connectionUrl = ConfigurationHelper.getMySQLConnectionUrl(context);
+        var userRepository = new MySQLUserRepository(connectionUrl);
+
+        var argon2Configuration = ConfigurationHelper.getArgon2Configuration(context);
+        var hasher = new Argon2PasswordHasher(
+                argon2Configuration.memoryKiB(),
+                argon2Configuration.iterations(),
+                argon2Configuration.parallelismThreads(),
+                argon2Configuration.keyLengthBytes()
+        );
+
+        userService = new UserService(userRepository, hasher);
+
         System.out.println("Serving files from base directory: " + this.baseDirectory);
     }
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp)
             throws ServletException, IOException {
-        String username = ensureLoggedIn(req, resp);
-        if(username == null) {
+        UUID userUUID = ensureLoggedInOrRedirect(req, resp);
+        if(userUUID == null) {
             return;
         }
+
+        var user = userService.findUserById(userUUID);
+        if (user == null) {
+            resp.sendError(HttpServletResponse.SC_FORBIDDEN, "User not found.");
+            return;
+        }
+
+        String userId = user.getId().toString();
 
         String requestedRelativePath = req.getParameter("path");
         if (requestedRelativePath == null || requestedRelativePath.isEmpty() || requestedRelativePath.equals("/")) {
@@ -47,11 +76,10 @@ public class BrowseServlet extends HttpServlet {
         // just in case
         requestedRelativePath = DirectoryHelper.replaceWindowsLineEndings(requestedRelativePath);
 
-        var requestedRelativePathWithinUserDirectory = Paths.get(username, requestedRelativePath);
+        var requestedRelativePathWithinUserDirectory = Paths.get(userId, requestedRelativePath);
 
         Path requestedPath = this.baseDirectory.resolve(requestedRelativePathWithinUserDirectory).normalize();
-        Path userBaseDirectory = getUserBaseDirectory(username);
-
+        Path userBaseDirectory = getUserBaseDirectory(userId);
         // in case someone tries "../"
         if (!requestedPath.startsWith(userBaseDirectory)) {
             resp.sendError(HttpServletResponse.SC_FORBIDDEN, "lmao no");
@@ -64,7 +92,7 @@ public class BrowseServlet extends HttpServlet {
         }
 
         if (Files.isDirectory(requestedPath)) {
-            serveDirectory(requestedPath, username, resp, req);
+            serveDirectory(requestedPath, user, resp, req);
         } else {
             serveFile(requestedPath, resp);
         }
@@ -86,38 +114,39 @@ public class BrowseServlet extends HttpServlet {
         }
     }
 
-    private void serveDirectory(Path directoryPath, String username, HttpServletResponse resp, HttpServletRequest req)
+    private void serveDirectory(Path directoryPath, User user, HttpServletResponse resp, HttpServletRequest req)
             throws ServletException, IOException {
-
-        var directory = new Directory(directoryPath, getUserBaseDirectory(username), DATE_FORMATTER);
+        var userId = user.getId().toString();
+        var directory = new Directory(directoryPath, getUserBaseDirectory(userId), DATE_FORMATTER);
 
         var generationTime = LocalDateTime.now();
         String formattedGenerationTime = generationTime.format(DATE_FORMATTER);
 
         req.setAttribute("directory", directory);
         req.setAttribute("generationTime", formattedGenerationTime);
+        req.setAttribute("username", user.getUsername());
 
         req.getRequestDispatcher("/WEB-INF/browse.jsp").forward(req, resp);
     }
 
     /**
-     * @return Username if logged in, otherwise, {@code null}.
+     * @return User id if logged in, otherwise, {@code null} and redirect to the login page.
      * @throws IOException
      */
-    private String ensureLoggedIn(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+    private UUID ensureLoggedInOrRedirect(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         var session = req.getSession(false);
 
-        boolean loggedIn = session != null && session.getAttribute("username") != null;
+        boolean loggedIn = session != null && session.getAttribute("userId") != null;
 
         if(!loggedIn) {
             resp.sendRedirect(req.getContextPath() + "/login");
             return null;
         }
 
-        return (String) session.getAttribute("username");
+        return UUID.fromString(session.getAttribute("userId").toString());
     }
 
-    private Path getUserBaseDirectory(String username) {
-        return this.baseDirectory.resolve(username).normalize();
+    private Path getUserBaseDirectory(String userId) {
+        return this.baseDirectory.resolve(userId).normalize();
     }
 }
