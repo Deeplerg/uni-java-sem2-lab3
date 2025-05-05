@@ -1,86 +1,54 @@
 package labs.dirbrowser.infrastructure;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
 
-public class UserDAO {
-    private final Connection connection;
+import org.hibernate.Session;
+import org.hibernate.Transaction;
 
-    public UserDAO(Connection connection) throws SQLException {
-        this.connection = connection;
+public class UserDAO implements AutoCloseable {
+    private final Session session;
+    private final Transaction transaction;
+
+    public UserDAO(Session session) {
+        this.session = session;
+        this.transaction = session.beginTransaction();
     }
 
-    public void ensureTable() throws SQLException {
-        var statement = connection.createStatement();
-        statement.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id VARCHAR(36) PRIMARY KEY,
-                username VARCHAR(255) NOT NULL UNIQUE,
-                password_hash VARCHAR(512) NOT NULL,
-                email VARCHAR(255) NOT NULL
-            );
-            """);
+    public UserDataSet getById(UUID id) {
+        return session.get(UserDataSet.class, id);
     }
 
-    public UserDataSet getById(UUID id) throws SQLException {
-        var statement = connection.prepareStatement("""
-            SELECT * FROM users
-            WHERE id=?
-            """);
+    public UserDataSet getByName(String username) {
+        var criteriaBuilder = session.getCriteriaBuilder();
+        var criteriaQuery = criteriaBuilder.createQuery();
 
-        statement.setString(1, id.toString());
+        var root = criteriaQuery.from(UserDataSet.class);
 
-        var result = statement.executeQuery();
-        return mapSingleUser(result);
+        criteriaQuery.select(root).where(criteriaBuilder.equal(root.get("username"), username));
+
+        var query = session.createQuery(criteriaQuery);
+        return (UserDataSet) query.getSingleResultOrNull();
     }
 
-    public UserDataSet getByName(String username) throws SQLException {
-        var statement = connection.prepareStatement("""
-            SELECT * FROM users
-            WHERE username=?
-            """);
-
-        statement.setString(1, username);
-
-        var result = statement.executeQuery();
-        return mapSingleUser(result);
+    public void addOrUpdate(UserDataSet user) {
+        session.merge(user);
     }
 
-    public void addOrUpdate(UserDataSet user) throws SQLException {
-        var statement = connection.prepareStatement("""
-            INSERT INTO users (id, username, password_hash, email)
-            VALUES (?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE
-                username = VALUES(username),
-                password_hash = VALUES(password_hash),
-                email = VALUES(email)
-            """);
-
-        statement.setString(1, user.getId().toString());
-        statement.setString(2, user.getUsername());
-        statement.setString(3, user.getPasswordHash());
-        statement.setString(4, user.getEmail());
-
-        statement.executeUpdate();
+    public void save() {
+        transaction.commit();
+        transaction.begin();
     }
 
-    private UserDataSet mapSingleUser(ResultSet result) throws SQLException {
-        if(result.next())
-            return mapTable(result);
-        else
-            return null;
-    }
-
-    private UserDataSet mapTable(ResultSet result) throws SQLException {
-        var id = result.getString(1);
-        var username = result.getString(2);
-        var passwordHash = result.getString(3);
-        var email = result.getString(4);
-
-        var convertedId = UUID.fromString(id);
-
-        return new UserDataSet(convertedId, username, passwordHash, email);
+    @Override
+    public void close() {
+        try {
+            transaction.commit();
+        } catch (Exception e) {
+            e.printStackTrace(); // yeah, probably
+        }
+        finally {
+            session.close();
+        }
     }
 }

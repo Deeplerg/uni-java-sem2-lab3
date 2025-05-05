@@ -1,14 +1,26 @@
 package labs.dirbrowser.infrastructure;
 
+import jakarta.persistence.*;
 import labs.dirbrowser.domain.User;
 
 import java.util.UUID;
 
+@Entity
+@Table(name = "users")
 public class UserDataSet {
+    @Id
+    @Column(name="id", unique=true, nullable=false, updatable=false)
     private UUID id;
+
+    @Column(name="username", unique=true, nullable=false)
     private String username;
+    @Column(name="password_hash", nullable=false)
     private String passwordHash;
+    @Column(name="email", nullable=false)
     private String email;
+
+    public UserDataSet() {
+    }
 
     public UserDataSet(
             UUID id,

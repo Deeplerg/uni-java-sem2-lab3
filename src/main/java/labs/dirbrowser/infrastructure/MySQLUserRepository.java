@@ -2,55 +2,59 @@ package labs.dirbrowser.infrastructure;
 
 import labs.dirbrowser.domain.User;
 import labs.dirbrowser.domain.UserRepository;
+import org.hibernate.SessionFactory;
+import org.hibernate.cfg.Configuration;
 
-import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.util.UUID;
 
 public class MySQLUserRepository implements UserRepository {
-    private final UserDAO users;
+    private final SessionFactory sessionFactory;
 
     public MySQLUserRepository(String connectionUrl) {
-        try {
-            var connection = DriverManager.getConnection(connectionUrl);
-            users = new UserDAO(connection);
-            users.ensureTable();
-        } catch (SQLException e) {
-            throw new PersistenceException("Database connection failed.", e);
-        }
+        var configuration = new Configuration();
+        configure(configuration, connectionUrl);
+
+        sessionFactory = configuration.buildSessionFactory();
     }
 
     @Override
     public User getById(UUID id) {
-        try {
+        var session = sessionFactory.openSession();
+        try (var users = new UserDAO(session)) {
             var dataSet = users.getById(id);
-            if(dataSet == null)
+            if (dataSet == null)
                 return null;
             return dataSet.toUser();
-        } catch (SQLException e) {
-            throw new PersistenceException(String.format("Failed to retrieve user by id (%s).", id), e);
         }
     }
 
     @Override
     public User getByName(String username) {
-        try {
+        var session = sessionFactory.openSession();
+        try (var users = new UserDAO(session)) {
             var dataSet = users.getByName(username);
-            if(dataSet == null)
+            if (dataSet == null)
                 return null;
             return dataSet.toUser();
-        } catch (SQLException e) {
-            throw new PersistenceException(String.format("Failed to retrieve user by name (%s).", username), e);
         }
     }
 
     @Override
     public void save(User user) {
-        try {
+        var session = sessionFactory.openSession();
+        try (var users = new UserDAO(session)) {
             var dataSet = UserDataSet.fromUser(user);
             users.addOrUpdate(dataSet);
-        } catch (SQLException e) {
-            throw new PersistenceException(String.format("Failed to save user (%s).", user.getId()), e);
+            users.save();
         }
+    }
+
+    private void configure(Configuration configuration, String connectionUrl) {
+        configuration.addAnnotatedClass(UserDataSet.class);
+
+        configuration.setProperty("hibernate.dialect", "org.hibernate.dialect.MySQLDialect");
+        configuration.setProperty("hibernate.connection.driver_class", "com.mysql.jdbc.Driver");
+        configuration.setProperty("hibernate.connection.url", connectionUrl);
+        configuration.setProperty("hibernate.hbm2ddl.auto", "update");
     }
 }
